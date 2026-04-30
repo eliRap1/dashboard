@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 export type Pet = {
   scope: "project" | "session";
@@ -20,6 +21,17 @@ function relTime(ms: number | null): string {
   if (s < 3600) return `${Math.floor(s/60)}m ago`;
   if (s < 86400) return `${Math.floor(s/3600)}h ago`;
   return `${Math.floor(s/86400)}d ago`;
+}
+
+function RelTime({ ms }: { ms: number | null }) {
+  const [text, setText] = useState<string>("—");
+  useEffect(() => {
+    const tick = () => setText(relTime(ms));
+    tick();
+    const id = setInterval(tick, 30_000);
+    return () => clearInterval(id);
+  }, [ms]);
+  return <span suppressHydrationWarning>{text}</span>;
 }
 
 function moodText(hp: number | null): string {
@@ -54,7 +66,7 @@ export function PetCard({ pet }: { pet: Pet }) {
       <div className="tama-name">{pet.name}</div>
       {pet.subline && <div className="text-[10px] font-mono text-stone-700">{pet.subline}</div>}
       <div className="tama-bar"><div className={`tama-bar-fill ${barColor(pet.hp)}`} style={{ width: `${hp}%` }} /></div>
-      <div className="tama-stats"><span>HP {hp}</span><span>{relTime(pet.lastMsgAt)}</span></div>
+      <div className="tama-stats"><span>HP {hp}</span><RelTime ms={pet.lastMsgAt} /></div>
     </Link>
   );
 }

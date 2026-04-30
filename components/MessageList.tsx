@@ -6,7 +6,7 @@ export function MessageList({ messages }: { messages: Msg[] }) {
       {messages.map((m, i) => (
         <div key={i} className="border-b border-stone-200 pb-1">
           <span className="font-bold">{m.role}</span>
-          <span className="text-stone-500"> · {new Date(m.ts).toLocaleString()}</span>
+          <span className="text-stone-500" suppressHydrationWarning> · {new Date(m.ts).toLocaleString()}</span>
           <pre className="whitespace-pre-wrap mt-1">{m.content}</pre>
         </div>
       ))}
