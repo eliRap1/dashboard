@@ -52,5 +52,18 @@ ${PROMPT_FOOTER}`;
     db.prepare("UPDATE pet_health SET ai_advice=? WHERE scope='session' AND target_id=?").run(parsed.advice, sessionId);
   }
 
+  const vault = (db.prepare("SELECT value FROM settings WHERE key='obsidian_vault_path'").get() as any)?.value;
+  if (vault) {
+    const { appendDailyNote } = await import("@/lib/obsidian/writer");
+    await appendDailyNote(vault, {
+      project: s.pname,
+      sessionShort: sessionId.slice(0, 8),
+      time: new Date().toLocaleTimeString(),
+      title: parsed.title,
+      summary: parsed.summary,
+      recommendation: parsed.recommendation
+    }).catch(() => {});
+  }
+
   bus.emit("feed:new", { kind: "summary_ready", sessionId, projectId: s.project_id });
 }

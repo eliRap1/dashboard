@@ -66,6 +66,20 @@ Reply ONLY with JSON: {"status":"ok"|"alert","message":"<1 sentence>","recommend
       const url = w.notify_webhook ?? (db.prepare("SELECT value FROM settings WHERE key='notify_webhook'").get() as any)?.value;
       if (url) await postWebhook(url, { watcher: w.name, scope: w.scope, target_id: w.target_id, message: parsed.message, recommendation: parsed.recommendation, ts: Date.now() }).catch(() => {});
     }
+
+    const vault = (db.prepare("SELECT value FROM settings WHERE key='obsidian_vault_path'").get() as any)?.value;
+    if (vault) {
+      const { appendDailyNote } = await import("@/lib/obsidian/writer");
+      await appendDailyNote(vault, {
+        project: w.scope === "project" ? (db.prepare("SELECT name FROM projects WHERE id=?").get(w.target_id) as any)?.name ?? "?" : "global",
+        sessionShort: w.scope === "session" ? String(w.target_id).slice(0, 8) : "—",
+        time: new Date().toLocaleTimeString(),
+        title: `watcher ${w.name}`,
+        summary: parsed.message ?? null,
+        recommendation: parsed.recommendation ?? null,
+        watcherAlert: status === "alert" ? parsed.message : undefined
+      }).catch(() => {});
+    }
   } finally {
     activeWatchers--;
   }
