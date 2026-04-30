@@ -1,5 +1,7 @@
 # Claude Session Dashboard Implementation Plan
 
+> **Pivot Note (2026-04-30):** v1 uses Node 24's built-in `node:sqlite` (FTS5 supported, no native build) instead of `better-sqlite3`. API differences absorbed in `lib/db.ts`: `db.pragma(...)` → `db.exec("PRAGMA ...")`, `db.transaction(fn)` → manual `BEGIN`/`COMMIT` helper. Row objects from `prepare(...).get()/.all()` have a null prototype — copy with `{...row}` if downstream code needs a plain object.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Local Next.js dashboard rendering every Claude Code session as a Tamagotchi-style pet card with live-tail, AI summaries via headless `claude -p`, scheduled/event-triggered watchers, webhook notifications, and Obsidian vault integration.

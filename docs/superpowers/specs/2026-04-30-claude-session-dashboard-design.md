@@ -4,6 +4,8 @@
 **Status:** Draft, pending implementation plan
 **Owner:** eli08
 
+> **Pivot Note (2026-04-30):** v1 uses Node 24's built-in `node:sqlite` (FTS5 supported, no native build) instead of `better-sqlite3`. API differences absorbed in `lib/db.ts`: `db.pragma(...)` → `db.exec("PRAGMA ...")`, `db.transaction(fn)` → manual `BEGIN`/`COMMIT` helper. Row objects from `prepare(...).get()/.all()` have a null prototype — copy with `{...row}` if downstream code needs a plain object.
+
 ## Purpose
 
 Local web dashboard that lets the user monitor and manage every Claude Code session across all projects, like a "zoo of pets" — each session/project rendered as a Tamagotchi-style pet card with live status, AI-generated summary, health (HP), and a per-pet AI watcher that runs scheduled or event-triggered checks via headless `claude -p`. Foundation for future automation, analytics, and orchestration sub-projects.

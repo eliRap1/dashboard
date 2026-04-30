@@ -1,0 +1,3 @@
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"run cmd"}]},"timestamp":"2026-04-30T12:01:00.000Z"}
+{"type":"assistant","message":{"role":"assistant","model":"claude-sonnet-4-6","content":[{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"false"}}],"usage":{"input_tokens":15,"output_tokens":7}},"timestamp":"2026-04-30T12:01:01.000Z"}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","content":"exit 1","is_error":true}]},"timestamp":"2026-04-30T12:01:02.000Z"}
