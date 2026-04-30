@@ -7,3 +7,8 @@ dist/
 build/
 *.log
 .DS_Store
+.next/
+tsconfig.tsbuildinfo
+coverage/
+playwright-report/
+test-results/
