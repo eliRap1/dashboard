@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { MessageList } from "@/components/MessageList";
 import { LiveTailPanel } from "@/components/LiveTailPanel";
+import { OpenInClaudeButton } from "@/components/OpenInClaudeButton";
 
 async function fetchSession(id: string) {
   const h = headers().get("host");
@@ -18,7 +19,10 @@ export default async function SessionPage({ params }: { params: { sessionId: str
   return (
     <main className="p-6 max-w-6xl mx-auto">
       <Link href={`/p/${meta.project_id}`} className="text-sm underline">← project</Link>
-      <h1 className="text-2xl font-bold mt-2">{meta.title ?? params.sessionId}</h1>
+      <div className="flex items-center justify-between mt-2">
+        <h1 className="text-2xl font-bold">{meta.title ?? params.sessionId}</h1>
+        <OpenInClaudeButton kind="session" id={params.sessionId} label="Resume in Claude Code" />
+      </div>
       <div className="text-sm text-stone-600 mb-4">{meta.project_name} · {meta.model ?? "?"} · HP {meta.hp ?? "—"} · {meta.face ?? ""}</div>
 
       {meta.summary && (

@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import { PetCard, type Pet } from "@/components/PetCard";
+import { OpenInClaudeButton } from "@/components/OpenInClaudeButton";
 
 async function fetchSessions(id: string): Promise<any[]> {
   try {
@@ -30,7 +31,10 @@ export default async function ProjectPage({ params }: { params: { projectId: str
   return (
     <main className="p-6 max-w-6xl mx-auto">
       <Link href="/" className="text-sm underline">← back to zoo</Link>
-      <h1 className="text-2xl font-bold mt-2 mb-4">Project: {params.projectId}</h1>
+      <div className="flex items-center justify-between mt-2 mb-4">
+        <h1 className="text-2xl font-bold">Project: {params.projectId}</h1>
+        <OpenInClaudeButton kind="project" id={params.projectId} />
+      </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {pets.map(p => <PetCard key={p.id} pet={p} />)}
       </div>
