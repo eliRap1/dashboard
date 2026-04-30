@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { PetCard, type Pet } from "@/components/PetCard";
 import { OpenInClaudeButton } from "@/components/OpenInClaudeButton";
+import { OpenInExplorerButton } from "@/components/OpenInExplorerButton";
 import { TasksPanel } from "@/components/TasksPanel";
 
 async function fetchSessions(id: string): Promise<any[]> {
@@ -32,9 +33,12 @@ export default async function ProjectPage({ params }: { params: { projectId: str
   return (
     <main className="p-6 max-w-6xl mx-auto">
       <Link href="/" className="text-sm underline">← back to zoo</Link>
-      <div className="flex items-center justify-between mt-2 mb-4">
+      <div className="flex items-center justify-between mt-2 mb-4 flex-wrap gap-2">
         <h1 className="text-2xl font-bold">Project: {params.projectId}</h1>
-        <OpenInClaudeButton kind="project" id={params.projectId} />
+        <div className="flex gap-2">
+          <OpenInExplorerButton projectId={params.projectId} />
+          <OpenInClaudeButton kind="project" id={params.projectId} />
+        </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {pets.map(p => <PetCard key={p.id} pet={p} />)}

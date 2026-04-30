@@ -52,6 +52,22 @@ export function openTerminal(o: OpenOpts): { platform: string; ok: boolean; erro
   }
 }
 
+export function openFolder(folder: string): { ok: boolean; error?: string } {
+  const p = path.normalize(folder);
+  try {
+    if (process.platform === "win32") {
+      spawn("explorer.exe", [p], { detached: true, stdio: "ignore" }).unref();
+    } else if (process.platform === "darwin") {
+      spawn("open", [p], { detached: true, stdio: "ignore" }).unref();
+    } else {
+      spawn("xdg-open", [p], { detached: true, stdio: "ignore" }).unref();
+    }
+    return { ok: true };
+  } catch (e: any) {
+    return { ok: false, error: String(e) };
+  }
+}
+
 export function openUrl(url: string): { ok: boolean; error?: string } {
   try {
     if (process.platform === "win32") {
