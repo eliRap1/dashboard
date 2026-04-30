@@ -11,9 +11,11 @@ function hashCwd(cwd: string): string {
 }
 
 function decodeProjectDir(name: string): string {
-  if (/^[A-Za-z]-/.test(name)) {
-    return name.replace(/^([A-Za-z])-(.*)/, (_, d, rest) => `${d}:\\${rest.replace(/-/g, "\\")}`);
+  // Windows: leading "<L>--" denotes drive + root, e.g. "D--dashboard" -> "D:\dashboard".
+  if (/^[A-Za-z]--/.test(name)) {
+    return name.replace(/^([A-Za-z])--/, "$1:\\").replace(/-/g, "\\");
   }
+  // Posix: leading "-" denotes "/", subsequent "-" are "/".
   return "/" + name.replace(/^-/, "").replace(/-/g, "/");
 }
 
@@ -30,7 +32,7 @@ export async function scanAll(): Promise<void> {
 
   const upsertProj = db.prepare(`
     INSERT INTO projects(id, cwd, name, first_seen, last_seen) VALUES (?,?,?,?,?)
-    ON CONFLICT(id) DO UPDATE SET last_seen=excluded.last_seen
+    ON CONFLICT(id) DO UPDATE SET cwd=excluded.cwd, name=excluded.name, last_seen=excluded.last_seen
   `);
   const upsertSession = db.prepare(`
     INSERT INTO sessions(id, project_id, jsonl_path, started_at, last_msg_at, msg_count, tokens_in, tokens_out, model, status, tail_offset, error_count)

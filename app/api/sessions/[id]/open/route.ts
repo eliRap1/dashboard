@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { spawn } from "node:child_process";
+import path from "node:path";
 import { getDb } from "@/lib/db";
 import { ensureBoot } from "@/lib/singletons";
 
@@ -16,7 +17,7 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
     "SELECT p.cwd FROM sessions s JOIN projects p ON p.id=s.project_id WHERE s.id=?"
   ).get(params.id) as any;
   if (!row?.cwd) return NextResponse.json({ error: "not found" }, { status: 404 });
-  const cwd: string = row.cwd;
+  const cwd: string = path.normalize(row.cwd);
   const claudeBin = process.env.CLAUDE_BIN ?? "claude";
   const cmd = `${claudeBin} --resume ${params.id}`;
 

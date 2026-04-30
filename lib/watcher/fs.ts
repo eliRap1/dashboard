@@ -12,7 +12,9 @@ let watcher: FSWatcher | null = null;
 async function onJsonlChange(filePath: string) {
   const sessionId = path.basename(filePath, ".jsonl");
   const projectDirName = path.basename(path.dirname(filePath));
-  const cwd = projectDirName.replace(/^([A-Za-z])-/, "$1:\\").replace(/-/g, "\\");
+  const cwd = /^[A-Za-z]--/.test(projectDirName)
+    ? projectDirName.replace(/^([A-Za-z])--/, "$1:\\").replace(/-/g, "\\")
+    : "/" + projectDirName.replace(/^-/, "").replace(/-/g, "/");
   const projectId = crypto.createHash("sha1").update(cwd).digest("hex").slice(0, 16);
   const db = getDb();
   const existed = db.prepare("SELECT id, tail_offset FROM sessions WHERE id=?").get(sessionId) as any;

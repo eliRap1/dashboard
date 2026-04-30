@@ -53,14 +53,16 @@ Reply ONLY with JSON: {"status":"ok"|"alert","message":"<1 sentence>","recommend
     db.prepare(`UPDATE watcher_runs SET ended_at=?, status=?, output=?, alert_msg=? WHERE id=?`)
       .run(Date.now(), status, r.stdout.slice(-4000), parsed.message ?? null, runId);
 
+    const feedKind = status === "alert" ? "watcher_alert" : "watcher_done";
+    const feedPayload = JSON.stringify({ watcherId, name: w.name, status, message: parsed.message, recommendation: parsed.recommendation });
     db.prepare(`INSERT INTO feed(ts,kind,project_id,session_id,payload) VALUES(?,?,?,?,?)`)
-      .run(Date.now(),
-           status === "alert" ? "watcher_alert" : "watcher_done",
+      .run(Date.now(), feedKind,
            w.scope === "project" ? w.target_id : null,
            w.scope === "session" ? w.target_id : null,
-           JSON.stringify({ watcherId, name: w.name, status, message: parsed.message, recommendation: parsed.recommendation }));
+           feedPayload);
 
     bus.emit(status === "alert" ? "watcher:alert" : "watcher:done", { watcherId, runId, status });
+    bus.emit("feed:new", { kind: feedKind, watcherId, name: w.name, status, message: parsed.message });
 
     if (status === "alert") {
       const url = w.notify_webhook ?? (db.prepare("SELECT value FROM settings WHERE key='notify_webhook'").get() as any)?.value;

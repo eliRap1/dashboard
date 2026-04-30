@@ -52,6 +52,10 @@ ${PROMPT_FOOTER}`;
     db.prepare("UPDATE pet_health SET ai_advice=? WHERE scope='session' AND target_id=?").run(parsed.advice, sessionId);
   }
 
+  db.prepare(`INSERT INTO feed(ts,kind,project_id,session_id,payload) VALUES(?,?,?,?,?)`)
+    .run(Date.now(), "summary_ready", s.project_id, sessionId,
+         JSON.stringify({ title: parsed.title, summary: parsed.summary, recommendation: parsed.recommendation }));
+
   const vault = (db.prepare("SELECT value FROM settings WHERE key='obsidian_vault_path'").get() as any)?.value;
   if (vault) {
     const { appendDailyNote } = await import("@/lib/obsidian/writer");
