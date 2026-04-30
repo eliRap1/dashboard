@@ -2,15 +2,21 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { PetCard, type Pet } from "@/components/PetCard";
 
-async function fetchSessions(id: string) {
-  const h = headers();
-  const res = await fetch(`http://${h.get("host")}/api/projects/${id}/sessions`, { cache: "no-store" });
-  return res.json();
+async function fetchSessions(id: string): Promise<any[]> {
+  try {
+    const h = headers();
+    const res = await fetch(`http://${h.get("host")}/api/projects/${id}/sessions`, { cache: "no-store" });
+    if (!res.ok) return [];
+    const j = await res.json();
+    return Array.isArray(j) ? j : [];
+  } catch {
+    return [];
+  }
 }
 
 export default async function ProjectPage({ params }: { params: { projectId: string } }) {
   const rows = await fetchSessions(params.projectId);
-  const pets: Pet[] = (rows as any[]).map((r: any) => ({
+  const pets: Pet[] = rows.map((r: any) => ({
     scope: "session",
     id: r.id,
     name: r.title ?? r.id.slice(0, 8),
