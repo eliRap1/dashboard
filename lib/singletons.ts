@@ -7,10 +7,27 @@ import { startEventRouter } from "@/lib/scheduler/events";
 import { bus } from "@/lib/bus";
 import { recomputeProjectHealth, recomputeSessionHealth } from "@/lib/health/recompute";
 import { debounce } from "@/lib/watcher/debounce";
+import { summarizeSession } from "@/lib/ai/summarize";
 
 declare global {
   // eslint-disable-next-line no-var
   var __dashboardBooted: boolean | undefined;
+}
+
+const MIN_MSGS_FOR_SUMMARY = 5;
+const summarizing = new Set<string>();
+
+async function maybeAutoSummarize(sessionId: string) {
+  if (summarizing.has(sessionId)) return;
+  const db = getDb();
+  const s = db.prepare("SELECT msg_count FROM sessions WHERE id=?").get(sessionId) as any;
+  if (!s || s.msg_count < MIN_MSGS_FOR_SUMMARY) return;
+  const existing = db.prepare("SELECT session_id FROM summaries WHERE session_id=?").get(sessionId);
+  if (existing) return;
+  summarizing.add(sessionId);
+  try { await summarizeSession(sessionId); }
+  catch { /* surface via feed already */ }
+  finally { summarizing.delete(sessionId); }
 }
 
 export async function ensureBoot(): Promise<void> {
@@ -30,6 +47,9 @@ export async function ensureBoot(): Promise<void> {
       if (row) recomputeProjectHealth(row.project_id);
     } catch { /* ignore */ }
   }, 5000);
-  bus.on("session:msg", (d: any) => recomputeForSession(d.sessionId));
-  bus.on("session:new", (d: any) => recomputeForSession(d.sessionId));
+
+  const autoSummarize = debounce((sid: string) => { maybeAutoSummarize(sid).catch(() => {}); }, 30_000);
+
+  bus.on("session:msg", (d: any) => { recomputeForSession(d.sessionId); autoSummarize(d.sessionId); });
+  bus.on("session:new", (d: any) => { recomputeForSession(d.sessionId); autoSummarize(d.sessionId); });
 }
