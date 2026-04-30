@@ -22,6 +22,12 @@ function runMigrations(db: Db) {
   const sqlPath = path.resolve(process.cwd(), "lib/migrations/001_init.sql");
   const sql = fs.readFileSync(sqlPath, "utf-8");
   db.exec(sql);
+  // Idempotent column adds for upgrading old DB files (sqlite has no IF NOT EXISTS for columns).
+  for (const stmt of [
+    "ALTER TABLE sessions ADD COLUMN is_internal INTEGER DEFAULT 0",
+  ]) {
+    try { db.exec(stmt); } catch { /* column already exists */ }
+  }
 }
 
 /** Run fn inside a transaction. Rolls back on throw. */

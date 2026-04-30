@@ -11,16 +11,30 @@ function hashCwd(cwd: string): string {
 }
 
 function decodeProjectDir(name: string): string {
-  // Windows: leading "<L>--" denotes drive + root, e.g. "D--dashboard" -> "D:\dashboard".
   if (/^[A-Za-z]--/.test(name)) {
     return name.replace(/^([A-Za-z])--/, "$1:\\").replace(/-/g, "\\");
   }
-  // Posix: leading "-" denotes "/", subsequent "-" are "/".
   return "/" + name.replace(/^-/, "").replace(/-/g, "/");
 }
 
 function projectName(cwd: string): string {
-  return path.basename(cwd.replace(/[\\/]+$/, "")) || cwd;
+  return path.basename(cwd.replace(/[\/]+$/, "")) || cwd;
+}
+
+const INTERNAL_MARKERS = [
+  "You are summarizing a Claude Code session for a dashboard.",
+  "You are a watcher named ",
+];
+
+export function isInternalSessionMessages(messages: { role: string; content: string }[]): boolean {
+  for (let i = 0; i < Math.min(messages.length, 8); i++) {
+    const m = messages[i];
+    if (!m) continue;
+    for (const mark of INTERNAL_MARKERS) {
+      if (m.content.includes(mark)) return true;
+    }
+  }
+  return false;
 }
 
 export async function scanAll(): Promise<void> {
@@ -35,14 +49,15 @@ export async function scanAll(): Promise<void> {
     ON CONFLICT(id) DO UPDATE SET cwd=excluded.cwd, name=excluded.name, last_seen=excluded.last_seen
   `);
   const upsertSession = db.prepare(`
-    INSERT INTO sessions(id, project_id, jsonl_path, started_at, last_msg_at, msg_count, tokens_in, tokens_out, model, status, tail_offset, error_count)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+    INSERT INTO sessions(id, project_id, jsonl_path, started_at, last_msg_at, msg_count, tokens_in, tokens_out, model, status, tail_offset, error_count, is_internal)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(id) DO UPDATE SET
       last_msg_at=excluded.last_msg_at, msg_count=excluded.msg_count,
       tokens_in=excluded.tokens_in, tokens_out=excluded.tokens_out,
       model=COALESCE(excluded.model, sessions.model),
       tail_offset=excluded.tail_offset,
-      error_count=excluded.error_count
+      error_count=excluded.error_count,
+      is_internal=excluded.is_internal
   `);
   const deleteFts = db.prepare("DELETE FROM messages_fts WHERE session_id = ?");
   const insertFts = db.prepare("INSERT INTO messages_fts(session_id, role, content, ts) VALUES (?,?,?,?)");
@@ -60,15 +75,18 @@ export async function scanAll(): Promise<void> {
       const sessionId = f.replace(/\.jsonl$/, "");
       const jsonlPath = path.join(projDir, f);
       const r = await parseJsonlFile(jsonlPath);
+      const internal = isInternalSessionMessages(r.messages) ? 1 : 0;
       upsertSession.run(
         sessionId, projId, jsonlPath,
         r.startedAt ?? now, r.lastMsgAt, r.msgCount,
         r.tokensIn, r.tokensOut, r.model, "idle",
-        r.endOffset, r.errorCount
+        r.endOffset, r.errorCount, internal
       );
       deleteFts.run(sessionId);
-      for (const m of r.messages) insertFts.run(sessionId, m.role, m.content, m.ts);
-      bus.emit("session:new", { sessionId, projectId: projId });
+      if (!internal) {
+        for (const m of r.messages) insertFts.run(sessionId, m.role, m.content, m.ts);
+      }
+      if (!internal) bus.emit("session:new", { sessionId, projectId: projId });
     }
   }
 }

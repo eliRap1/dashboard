@@ -12,7 +12,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     FROM sessions s
     LEFT JOIN pet_health ph ON ph.scope='session' AND ph.target_id=s.id
     LEFT JOIN summaries sm  ON sm.session_id=s.id
-    WHERE s.project_id=? ORDER BY s.last_msg_at DESC NULLS LAST
+    WHERE s.project_id=? AND s.is_internal=0 ORDER BY s.last_msg_at DESC NULLS LAST
   `).all(params.id).map((r: any) => ({ ...r }));
   return NextResponse.json(rows);
 }

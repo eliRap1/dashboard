@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   ended_at INTEGER,
   status TEXT DEFAULT 'idle',
   tail_offset INTEGER DEFAULT 0,
-  error_count INTEGER DEFAULT 0
+  error_count INTEGER DEFAULT 0,
+  is_internal INTEGER DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_project  ON sessions(project_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_last_msg ON sessions(last_msg_at DESC);

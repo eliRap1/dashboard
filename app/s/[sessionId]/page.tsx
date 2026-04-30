@@ -3,6 +3,7 @@ import Link from "next/link";
 import { MessageList } from "@/components/MessageList";
 import { LiveTailPanel } from "@/components/LiveTailPanel";
 import { OpenInClaudeButton } from "@/components/OpenInClaudeButton";
+import { RegenerateSummaryButton } from "@/components/RegenerateSummaryButton";
 
 async function fetchSession(id: string) {
   const h = headers().get("host");
@@ -34,9 +35,9 @@ export default async function SessionPage({ params }: { params: { sessionId: str
         </section>
       )}
 
-      <form action={`/api/sessions/${params.sessionId}/summarize`} method="post" className="mb-4">
-        <button className="border-2 border-stone-900 rounded-md px-3 py-1 bg-amber-200">Regenerate summary</button>
-      </form>
+      <div className="mb-4">
+        <RegenerateSummaryButton sessionId={params.sessionId} />
+      </div>
 
       <div className="grid md:grid-cols-2 gap-4">
         <div>
