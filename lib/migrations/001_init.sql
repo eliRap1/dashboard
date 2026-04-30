@@ -117,3 +117,14 @@ INSERT OR IGNORE INTO settings(key,value) VALUES
   ('concurrency_caps', '{"watchers":3,"summaries":2}'),
   ('quota_threshold', '5000000'),
   ('project_hp_strategy', 'max');
+
+-- Per-project user-defined tasks (open URL, run command, tail log)
+CREATE TABLE IF NOT EXISTS project_tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id TEXT NOT NULL REFERENCES projects(id),
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL,           -- 'open_url' | 'run_command' | 'tail_log'
+  config TEXT NOT NULL,         -- JSON
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_project_tasks_proj ON project_tasks(project_id);

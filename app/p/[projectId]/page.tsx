@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { PetCard, type Pet } from "@/components/PetCard";
 import { OpenInClaudeButton } from "@/components/OpenInClaudeButton";
+import { TasksPanel } from "@/components/TasksPanel";
 
 async function fetchSessions(id: string): Promise<any[]> {
   try {
@@ -38,6 +39,7 @@ export default async function ProjectPage({ params }: { params: { projectId: str
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {pets.map(p => <PetCard key={p.id} pet={p} />)}
       </div>
+      <TasksPanel projectId={params.projectId} />
     </main>
   );
 }
