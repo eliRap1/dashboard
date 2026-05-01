@@ -55,18 +55,58 @@ function barColor(hp: number | null): string {
   return "bg-red-500";
 }
 
+async function postAction(url: string, label: string) {
+  try {
+    const r = await fetch(url, { method: "POST" });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      alert(`${label}: error ${j.error ?? r.status}`);
+    }
+  } catch (e: any) {
+    alert(`${label}: ${e?.message ?? e}`);
+  }
+}
+
+function QuickActions({ pet }: { pet: Pet }) {
+  // Stop click propagation so the pet card link doesn't fire.
+  const stop = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); };
+  if (pet.scope === "project") {
+    return (
+      <div className="absolute top-1 right-1 flex gap-1 z-10">
+        <button title="Open folder"
+          onClick={e => { stop(e); postAction(`/api/projects/${pet.id}/explorer`, "Open folder"); }}
+          className="bg-sky-200 hover:bg-sky-300 border border-stone-900 rounded px-1 text-[11px] leading-none py-0.5 font-mono">📁</button>
+        <button title="Open in Claude Code"
+          onClick={e => { stop(e); postAction(`/api/projects/${pet.id}/open`, "Open in Claude"); }}
+          className="bg-emerald-200 hover:bg-emerald-300 border border-stone-900 rounded px-1 text-[11px] leading-none py-0.5 font-mono">⚡</button>
+      </div>
+    );
+  }
+  // session scope
+  return (
+    <div className="absolute top-1 right-1 flex gap-1 z-10">
+      <button title="Resume in Claude Code"
+        onClick={e => { stop(e); postAction(`/api/sessions/${pet.id}/open`, "Resume"); }}
+        className="bg-emerald-200 hover:bg-emerald-300 border border-stone-900 rounded px-1 text-[11px] leading-none py-0.5 font-mono">⚡</button>
+    </div>
+  );
+}
+
 export function PetCard({ pet }: { pet: Pet }) {
   const hp = pet.hp ?? 0;
   return (
-    <Link href={pet.href} className={`tama-card ${pet.active ? "tama-card-active" : ""}`}>
-      <div className={`tama-screen ${screenBg(pet.hp)}`}>
-        <div className="tama-face">{pet.face ?? "(?_?)"}</div>
-        <div className="tama-mood">{moodText(pet.hp)}</div>
-      </div>
-      <div className="tama-name">{pet.name}</div>
-      {pet.subline && <div className="text-[10px] font-mono text-stone-700">{pet.subline}</div>}
-      <div className="tama-bar"><div className={`tama-bar-fill ${barColor(pet.hp)}`} style={{ width: `${hp}%` }} /></div>
-      <div className="tama-stats"><span>HP {hp}</span><RelTime ms={pet.lastMsgAt} /></div>
-    </Link>
+    <div className="relative">
+      <QuickActions pet={pet} />
+      <Link href={pet.href} className={`tama-card ${pet.active ? "tama-card-active" : ""}`}>
+        <div className={`tama-screen ${screenBg(pet.hp)}`}>
+          <div className="tama-face">{pet.face ?? "(?_?)"}</div>
+          <div className="tama-mood">{moodText(pet.hp)}</div>
+        </div>
+        <div className="tama-name">{pet.name}</div>
+        {pet.subline && <div className="text-[10px] font-mono text-stone-700">{pet.subline}</div>}
+        <div className="tama-bar"><div className={`tama-bar-fill ${barColor(pet.hp)}`} style={{ width: `${hp}%` }} /></div>
+        <div className="tama-stats"><span>HP {hp}</span><RelTime ms={pet.lastMsgAt} /></div>
+      </Link>
+    </div>
   );
 }

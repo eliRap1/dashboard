@@ -6,6 +6,13 @@ import { registerCronWatcher, unregisterCron } from "@/lib/scheduler/cron";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+export async function GET(_: Request, { params }: { params: { id: string } }) {
+  await ensureBoot();
+  const w = getDb().prepare("SELECT * FROM watchers WHERE id=?").get(params.id) as any;
+  if (!w) return NextResponse.json({ error: "not found" }, { status: 404 });
+  return NextResponse.json({ ...w });
+}
+
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   await ensureBoot();
   const body = await req.json();

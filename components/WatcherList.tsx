@@ -22,6 +22,7 @@ export function WatcherList() {
             <div className="text-xs text-stone-600">{w.trigger_kind} · {w.trigger_value}</div>
             <div className="text-xs">{w.prompt}</div>
           </div>
+          <a href={`/watchers/${w.id}`} className="border px-2 py-1 text-xs underline">View</a>
           <button onClick={() => runNow(w.id)} className="border px-2 py-1 text-xs">Run</button>
           <button onClick={() => toggle(w)}    className="border px-2 py-1 text-xs">{w.enabled ? "Disable" : "Enable"}</button>
           <button onClick={() => remove(w.id)} className="border px-2 py-1 text-xs">Delete</button>
