@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { getDb, tx } from "@/lib/db";
 import { ensureBoot } from "@/lib/singletons";
 import { registerCronWatcher, unregisterCron } from "@/lib/scheduler/cron";
 
@@ -27,7 +27,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 export async function DELETE(_: Request, { params }: { params: { id: string } }) {
   await ensureBoot();
   unregisterCron(parseInt(params.id, 10));
-  getDb().prepare("DELETE FROM watcher_runs WHERE watcher_id=?").run(params.id);
-  getDb().prepare("DELETE FROM watchers WHERE id=?").run(params.id);
+  const db = getDb();
+  tx(db, () => {
+    db.prepare("DELETE FROM watcher_runs WHERE watcher_id=?").run(params.id);
+    db.prepare("DELETE FROM watchers WHERE id=?").run(params.id);
+  });
   return NextResponse.json({ ok: true });
 }
