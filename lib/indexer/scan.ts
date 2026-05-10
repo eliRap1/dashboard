@@ -61,6 +61,7 @@ export async function scanAll(): Promise<void> {
   `);
   const deleteFts = db.prepare("DELETE FROM messages_fts WHERE session_id = ?");
   const insertFts = db.prepare("INSERT INTO messages_fts(session_id, role, content, ts) VALUES (?,?,?,?)");
+  const existsSession = db.prepare("SELECT 1 FROM sessions WHERE id=?");
 
   for (const dirName of entries) {
     const projDir = path.join(root, dirName);
@@ -74,6 +75,7 @@ export async function scanAll(): Promise<void> {
     for (const f of files) {
       const sessionId = f.replace(/\.jsonl$/, "");
       const jsonlPath = path.join(projDir, f);
+      const isNew = !existsSession.get(sessionId);
       const r = await parseJsonlFile(jsonlPath);
       const internal = isInternalSessionMessages(r.messages) ? 1 : 0;
       upsertSession.run(
@@ -86,7 +88,7 @@ export async function scanAll(): Promise<void> {
       if (!internal) {
         for (const m of r.messages) insertFts.run(sessionId, m.role, m.content, m.ts);
       }
-      if (!internal) bus.emit("session:new", { sessionId, projectId: projId });
+      if (!internal && isNew) bus.emit("session:new", { sessionId, projectId: projId });
     }
   }
 }
