@@ -52,8 +52,11 @@ async function onJsonlChange(filePath: string) {
   if (!existed) bus.emit("session:new", { sessionId, projectId });
   for (const m of r.messages) {
     bus.emit("session:msg", { sessionId, projectId, role: m.role, content: m.content, ts: m.ts });
-    if (m.content.startsWith("[result:") && m.content.includes('"is_error":true')) bus.emit("session:error", { sessionId, projectId });
   }
+  // Emit session:error once if any new message batch contained a tool error.
+  // isErrorToolResult operates on the raw JSONL objects; we use errorCount as a proxy
+  // since flattenContent drops the is_error flag from the already-flattened content strings.
+  if (r.errorCount > 0) bus.emit("session:error", { sessionId, projectId });
 }
 
 const onJsonlDebounced = debounce((p: string) => { onJsonlChange(p).catch(() => {}); }, 250);
