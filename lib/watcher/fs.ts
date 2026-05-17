@@ -5,7 +5,7 @@ import { plansDir, projectsDir, sessionsDir, todosDir, tasksDir } from "@/lib/pa
 import { bus } from "@/lib/bus";
 import { debounce } from "@/lib/watcher/debounce";
 import { parseJsonlFile } from "@/lib/indexer/jsonl";
-import { isInternalSessionMessages } from "@/lib/indexer/scan";
+import { isInternalSessionMessages, decodeProjectDir } from "@/lib/indexer/scan";
 import { getDb } from "@/lib/db";
 
 let watcher: FSWatcher | null = null;
@@ -13,15 +13,21 @@ let watcher: FSWatcher | null = null;
 async function onJsonlChange(filePath: string) {
   const sessionId = path.basename(filePath, ".jsonl");
   const projectDirName = path.basename(path.dirname(filePath));
-  const cwd = /^[A-Za-z]--/.test(projectDirName)
-    ? projectDirName.replace(/^([A-Za-z])--/, "$1:\\").replace(/-/g, "\\")
-    : "/" + projectDirName.replace(/^-/, "").replace(/-/g, "/");
+  const cwd = decodeProjectDir(projectDirName);
   const projectId = crypto.createHash("sha1").update(cwd).digest("hex").slice(0, 16);
   const db = getDb();
   const existed = db.prepare("SELECT id, tail_offset, is_internal FROM sessions WHERE id=?").get(sessionId) as any;
   const fromOffset = existed ? existed.tail_offset : 0;
   const r = await parseJsonlFile(filePath, fromOffset);
-  if (r.msgCount === 0 && existed) return;
+  // If no new content-bearing messages but the file grew (e.g. only metadata
+  // lines were appended), still advance tail_offset so we don't re-read those
+  // lines on every subsequent change event.
+  if (r.msgCount === 0 && existed) {
+    if (r.endOffset > fromOffset) {
+      db.prepare("UPDATE sessions SET tail_offset=? WHERE id=?").run(r.endOffset, sessionId);
+    }
+    return;
+  }
 
   // Compute is_internal: prior flag OR newly-detected from incoming messages
   const incomingInternal = isInternalSessionMessages(r.messages) ? 1 : 0;

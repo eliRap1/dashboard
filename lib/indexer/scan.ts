@@ -10,9 +10,9 @@ function hashCwd(cwd: string): string {
   return crypto.createHash("sha1").update(cwd).digest("hex").slice(0, 16);
 }
 
-function decodeProjectDir(name: string): string {
+export function decodeProjectDir(name: string): string {
   if (/^[A-Za-z]--/.test(name)) {
-    return name.replace(/^([A-Za-z])--/, "$1:\\").replace(/-/g, "\\");
+    return name.replace(/^([A-Za-z])--/, "$1:\\\\").replace(/-/g, "\\\\");
   }
   return "/" + name.replace(/^-/, "").replace(/-/g, "/");
 }
