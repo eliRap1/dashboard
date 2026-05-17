@@ -20,6 +20,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   try { cfg = JSON.parse(t.config); } catch { /* empty */ }
   const file: string = cfg.file_path;
   if (!file) return NextResponse.json({ error: "config.file_path missing" }, { status: 400 });
+  // TODO(audit): validate that `file` is restricted to a safe set of directories
+  // (e.g. project cwd) using assertUnderClaudeHome or a similar guard, so a
+  // manually crafted task config cannot read arbitrary files from the filesystem.
 
   const enc = new TextEncoder();
   let offset = 0;

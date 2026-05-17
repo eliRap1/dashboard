@@ -5,6 +5,12 @@ import { postWebhook } from "@/lib/notify/webhook";
 
 export type RunOpts = { bin?: string; args?: string[]; timeoutMs?: number };
 
+// TODO(audit): `activeWatchers` is a plain module-level counter. In Next.js dev
+// mode the module can be hot-reloaded, resetting the counter while in-flight
+// watcher processes are still running. This lets more concurrent watchers run
+// than the cap allows. Fixing properly requires persisting the count in the DB
+// or in a globalThis singleton (like the bus) — a cross-module change left for
+// a dedicated refactor.
 let activeWatchers = 0;
 function caps() {
   const v = (getDb().prepare("SELECT value FROM settings WHERE key='concurrency_caps'").get() as any)?.value
