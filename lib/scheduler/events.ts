@@ -7,7 +7,8 @@ const EVENT_MAP: Record<string, string> = {
   "on:session_msg":  "session:msg",
   "on:error":        "session:error",
   "on:plan_change":  "plan:change",
-  "on:todo_change":  "todo:change"
+  "on:todo_change":  "todo:change",
+  "on:task_change":  "task:change",
 };
 
 export function startEventRouter() {
