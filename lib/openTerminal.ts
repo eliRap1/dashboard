@@ -38,7 +38,13 @@ export function openTerminal(o: OpenOpts): { platform: string; ok: boolean; erro
       return { platform: "win32", ok: true };
     }
     if (process.platform === "darwin") {
-      const script = `tell application "Terminal" to do script "cd ${cwd.replace(/"/g, '\\"')} && ${command}"`;
+      // Use AppleScript `quoted form of` to shell-escape cwd so paths with spaces or
+      // special characters are passed safely. command is validated by the caller.
+      const script = [
+        `set theCwd to ${JSON.stringify(cwd)}`,
+        `set theCmd to ${JSON.stringify(command)}`,
+        `tell application "Terminal" to do script "cd " & quoted form of theCwd & " && " & theCmd`,
+      ].join("\n");
       const child = spawn("osascript", ["-e", script], { detached: true, stdio: "ignore" });
       child.unref();
       return { platform: "darwin", ok: true };
