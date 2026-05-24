@@ -11,7 +11,7 @@ import { summarizeSession } from "@/lib/ai/summarize";
 
 declare global {
   // eslint-disable-next-line no-var
-  var __dashboardBooted: boolean | undefined;
+  var __dashboardBoot: Promise<void> | undefined;
 }
 
 const MIN_MSGS_FOR_SUMMARY = 5;
@@ -30,26 +30,30 @@ async function maybeAutoSummarize(sessionId: string) {
   finally { summarizing.delete(sessionId); }
 }
 
-export async function ensureBoot(): Promise<void> {
-  if (globalThis.__dashboardBooted) return;
-  globalThis.__dashboardBooted = true;
-  getDb();
-  await scanAll();
-  startLivePolling(2000);
-  await startFsWatcher();
-  startEventRouter();
-  reloadAllCronWatchers();
+// Stores the in-flight (or completed) boot promise so concurrent callers
+// all await the same work rather than running initialization twice.
+export function ensureBoot(): Promise<void> {
+  if (globalThis.__dashboardBoot) return globalThis.__dashboardBoot;
+  globalThis.__dashboardBoot = (async () => {
+    getDb();
+    await scanAll();
+    startLivePolling(2000);
+    await startFsWatcher();
+    startEventRouter();
+    reloadAllCronWatchers();
 
-  const recomputeForSession = debounce((sid: string) => {
-    try {
-      recomputeSessionHealth(sid);
-      const row = getDb().prepare("SELECT project_id FROM sessions WHERE id=?").get(sid) as any;
-      if (row) recomputeProjectHealth(row.project_id);
-    } catch { /* ignore */ }
-  }, 5000);
+    const recomputeForSession = debounce((sid: string) => {
+      try {
+        recomputeSessionHealth(sid);
+        const row = getDb().prepare("SELECT project_id FROM sessions WHERE id=?").get(sid) as any;
+        if (row) recomputeProjectHealth(row.project_id);
+      } catch { /* ignore */ }
+    }, 5000);
 
-  const autoSummarize = debounce((sid: string) => { maybeAutoSummarize(sid).catch(() => {}); }, 30_000);
+    const autoSummarize = debounce((sid: string) => { maybeAutoSummarize(sid).catch(() => {}); }, 30_000);
 
-  bus.on("session:msg", (d: any) => { recomputeForSession(d.sessionId); autoSummarize(d.sessionId); });
-  bus.on("session:new", (d: any) => { recomputeForSession(d.sessionId); autoSummarize(d.sessionId); });
+    bus.on("session:msg", (d: any) => { recomputeForSession(d.sessionId); autoSummarize(d.sessionId); });
+    bus.on("session:new", (d: any) => { recomputeForSession(d.sessionId); autoSummarize(d.sessionId); });
+  })();
+  return globalThis.__dashboardBoot;
 }

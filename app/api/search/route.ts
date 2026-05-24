@@ -19,7 +19,14 @@ export async function GET(req: Request) {
   if (since) { conds.push("ts >= ?");   args.push(parseInt(since, 10)); }
   const sql = `SELECT session_id, role, snippet(messages_fts, 2, '<mark>', '</mark>', '…', 12) AS snippet, ts
                FROM messages_fts WHERE ${conds.join(" AND ")} ORDER BY ts DESC LIMIT 200`;
-  let rows = getDb().prepare(sql).all(...args).map((r: any) => ({ ...r }));
+  let rows: any[];
+  try {
+    rows = getDb().prepare(sql).all(...args).map((r: any) => ({ ...r }));
+  } catch {
+    // Malformed FTS5 syntax (unmatched quotes, bare operators, etc.) raises a SQLite
+    // error that would propagate as a 500. Return an empty result instead.
+    return NextResponse.json([]);
+  }
   if (projectId) {
     const ids = new Set(
       (getDb().prepare("SELECT id FROM sessions WHERE project_id=?").all(projectId) as any[])

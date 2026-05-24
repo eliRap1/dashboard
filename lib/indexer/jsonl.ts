@@ -45,9 +45,7 @@ export async function parseJsonlFile(filePath: string, fromOffset = 0): Promise<
   };
   // Skip pure-metadata shapes (no content, just session-level state)
   const META_TYPES = new Set(["last-prompt", "permission-mode", "summary", "compact-marker"]);
-  let bytes = fromOffset;
   for await (const raw of rl) {
-    bytes += Buffer.byteLength(raw, "utf8") + 1;
     const line = raw.trim();
     if (!line) continue;
     let obj: any;
@@ -80,6 +78,9 @@ export async function parseJsonlFile(filePath: string, fromOffset = 0): Promise<
     }
     if (isErrorToolResult(obj.message?.content)) r.errorCount++;
   }
-  r.endOffset = bytes;
+  // Use the stream's own byte counter rather than manually summing line lengths.
+  // Manual counting with Buffer.byteLength(raw) + 1 undercounts CRLF files because
+  // readline strips \r but the underlying file has two bytes per line ending.
+  r.endOffset = fromOffset + stream.bytesRead;
   return r;
 }

@@ -4,6 +4,7 @@ import fsp from "node:fs/promises";
 import chokidar from "chokidar";
 import { getDb } from "@/lib/db";
 import { ensureBoot } from "@/lib/singletons";
+import { assertUnderClaudeHome } from "@/lib/paths";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -20,6 +21,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   try { cfg = JSON.parse(t.config); } catch { /* empty */ }
   const file: string = cfg.file_path;
   if (!file) return NextResponse.json({ error: "config.file_path missing" }, { status: 400 });
+  try { assertUnderClaudeHome(file); } catch {
+    return NextResponse.json({ error: "file_path must be inside claude home" }, { status: 403 });
+  }
 
   const enc = new TextEncoder();
   let offset = 0;
