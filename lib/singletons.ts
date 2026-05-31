@@ -6,7 +6,6 @@ import { reloadAllCronWatchers } from "@/lib/scheduler/cron";
 import { startEventRouter } from "@/lib/scheduler/events";
 import { bus } from "@/lib/bus";
 import { recomputeProjectHealth, recomputeSessionHealth } from "@/lib/health/recompute";
-import { debounce } from "@/lib/watcher/debounce";
 import { summarizeSession } from "@/lib/ai/summarize";
 
 declare global {
@@ -40,16 +39,29 @@ export async function ensureBoot(): Promise<void> {
   startEventRouter();
   reloadAllCronWatchers();
 
-  const recomputeForSession = debounce((sid: string) => {
-    try {
-      recomputeSessionHealth(sid);
-      const row = getDb().prepare("SELECT project_id FROM sessions WHERE id=?").get(sid) as any;
-      if (row) recomputeProjectHealth(row.project_id);
-    } catch { /* ignore */ }
-  }, 5000);
+  const recomputeTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  const summarizeTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-  const autoSummarize = debounce((sid: string) => { maybeAutoSummarize(sid).catch(() => {}); }, 30_000);
+  function scheduleRecompute(sid: string) {
+    clearTimeout(recomputeTimers.get(sid));
+    recomputeTimers.set(sid, setTimeout(() => {
+      recomputeTimers.delete(sid);
+      try {
+        recomputeSessionHealth(sid);
+        const row = getDb().prepare("SELECT project_id FROM sessions WHERE id=?").get(sid) as any;
+        if (row) recomputeProjectHealth(row.project_id);
+      } catch { /* ignore */ }
+    }, 5000));
+  }
 
-  bus.on("session:msg", (d: any) => { recomputeForSession(d.sessionId); autoSummarize(d.sessionId); });
-  bus.on("session:new", (d: any) => { recomputeForSession(d.sessionId); autoSummarize(d.sessionId); });
+  function scheduleSummarize(sid: string) {
+    clearTimeout(summarizeTimers.get(sid));
+    summarizeTimers.set(sid, setTimeout(() => {
+      summarizeTimers.delete(sid);
+      maybeAutoSummarize(sid).catch(() => {});
+    }, 30_000));
+  }
+
+  bus.on("session:msg", (d: any) => { scheduleRecompute(d.sessionId); scheduleSummarize(d.sessionId); });
+  bus.on("session:new", (d: any) => { scheduleRecompute(d.sessionId); scheduleSummarize(d.sessionId); });
 }

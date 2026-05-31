@@ -18,9 +18,11 @@ export async function GET() {
 export async function PATCH(req: Request) {
   await ensureBoot();
   const body = await req.json();
+  for (const k of Object.keys(body)) {
+    if (!ALLOWED.has(k)) return NextResponse.json({ error: `unknown key ${k}` }, { status: 400 });
+  }
   const stmt = getDb().prepare("INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value");
   for (const [k, v] of Object.entries(body)) {
-    if (!ALLOWED.has(k)) return NextResponse.json({ error: `unknown key ${k}` }, { status: 400 });
     stmt.run(k, String(v));
   }
   return NextResponse.json({ ok: true });
