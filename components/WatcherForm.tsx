@@ -13,7 +13,7 @@ export function WatcherForm({ onCreated }: { onCreated: (w: any) => void }) {
   const [name, setName]                   = useState("");
   const [prompt, setPrompt]               = useState("");
   const [trigger_kind, setKind]           = useState<"cron" | "event">("cron");
-  const [trigger_value, setVal]           = useState("0 */30 * * *");
+  const [trigger_value, setVal]           = useState("*/30 * * * *");
   const [enabled, setEnabled]             = useState(true);
   const [notify_webhook, setHook]         = useState("");
 

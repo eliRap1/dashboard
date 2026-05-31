@@ -51,8 +51,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           const fd = await fsp.open(file, "r");
           const len = st.size - offset;
           const b = Buffer.allocUnsafe(len);
-          await fd.read(b, 0, len, offset);
-          await fd.close();
+          try {
+            await fd.read(b, 0, len, offset);
+          } finally {
+            await fd.close();
+          }
           offset = st.size;
           sendChunk(b.toString("utf8"));
         } catch (e: any) { sendErr(String(e)); }
