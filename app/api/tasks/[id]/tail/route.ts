@@ -23,10 +23,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
   const enc = new TextEncoder();
   let offset = 0;
-  try {
-    const st = await fsp.stat(file);
-    offset = Math.max(0, st.size - MAX_TAIL_BYTES);
-  } catch { offset = 0; }
 
   const stream = new ReadableStream({
     async start(controller) {
