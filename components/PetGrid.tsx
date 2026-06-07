@@ -7,7 +7,7 @@ import { useState } from "react";
 export function PetGrid({ initial }: { initial: Pet[] }) {
   const [pets, setPets] = useState<Pet[]>(initial);
   useEventStream({
-    "health:change": (d: any) => setPets(p => p.map(x => x.id === d.targetId && x.scope === d.scope ? { ...x, hp: d.hp } : x)),
+    "health:change": (d: any) => setPets(p => p.map(x => x.id === d.targetId && x.scope === d.scope ? { ...x, hp: d.hp, face: d.face ?? x.face } : x)),
     "live:change":   () => { fetch("/api/projects").then(r => r.json()).then((rows: any[]) => setPets(rows.map(rowToPet))); }
   });
   return (

@@ -34,7 +34,7 @@ export function recomputeSessionHealth(sessionId: string) {
                 watcher_pct=excluded.watcher_pct, tokens_pct=excluded.tokens_pct, face=excluded.face,
                 computed_at=excluded.computed_at`)
     .run(sessionId, r.hp, r.activityPct, r.errorPct, r.watcherPct, r.tokensPct, r.face, sessionId, Date.now());
-  bus.emit("health:change", { scope: "session", targetId: sessionId, hp: r.hp });
+  bus.emit("health:change", { scope: "session", targetId: sessionId, hp: r.hp, face: r.face });
 }
 
 export function recomputeProjectHealth(projectId: string) {
@@ -49,5 +49,5 @@ export function recomputeProjectHealth(projectId: string) {
   db.prepare(`INSERT INTO pet_health(scope,target_id,hp,face,computed_at) VALUES('project',?,?,?,?)
               ON CONFLICT(scope,target_id) DO UPDATE SET hp=excluded.hp, face=excluded.face, computed_at=excluded.computed_at`)
     .run(projectId, hp, faceForHp(hp), Date.now());
-  bus.emit("health:change", { scope: "project", targetId: projectId, hp });
+  bus.emit("health:change", { scope: "project", targetId: projectId, hp, face: faceForHp(hp) });
 }
