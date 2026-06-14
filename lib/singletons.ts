@@ -40,15 +40,32 @@ export async function ensureBoot(): Promise<void> {
   startEventRouter();
   reloadAllCronWatchers();
 
-  const recomputeForSession = debounce((sid: string) => {
-    try {
-      recomputeSessionHealth(sid);
-      const row = getDb().prepare("SELECT project_id FROM sessions WHERE id=?").get(sid) as any;
-      if (row) recomputeProjectHealth(row.project_id);
-    } catch { /* ignore */ }
-  }, 5000);
+  // Per-session debounce maps: a single shared debounce would drop calls for other session IDs
+  // when a rapid burst spans multiple sessions.
+  const recomputeTimers = new Map<string, NodeJS.Timeout>();
+  const summarizeTimers = new Map<string, NodeJS.Timeout>();
 
-  const autoSummarize = debounce((sid: string) => { maybeAutoSummarize(sid).catch(() => {}); }, 30_000);
+  function recomputeForSession(sid: string) {
+    const existing = recomputeTimers.get(sid);
+    if (existing) clearTimeout(existing);
+    recomputeTimers.set(sid, setTimeout(() => {
+      recomputeTimers.delete(sid);
+      try {
+        recomputeSessionHealth(sid);
+        const row = getDb().prepare("SELECT project_id FROM sessions WHERE id=?").get(sid) as any;
+        if (row) recomputeProjectHealth(row.project_id);
+      } catch { /* ignore */ }
+    }, 5000));
+  }
+
+  function autoSummarize(sid: string) {
+    const existing = summarizeTimers.get(sid);
+    if (existing) clearTimeout(existing);
+    summarizeTimers.set(sid, setTimeout(() => {
+      summarizeTimers.delete(sid);
+      maybeAutoSummarize(sid).catch(() => {});
+    }, 30_000));
+  }
 
   bus.on("session:msg", (d: any) => { recomputeForSession(d.sessionId); autoSummarize(d.sessionId); });
   bus.on("session:new", (d: any) => { recomputeForSession(d.sessionId); autoSummarize(d.sessionId); });
