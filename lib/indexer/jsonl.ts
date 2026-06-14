@@ -37,6 +37,18 @@ function isErrorToolResult(content: any): boolean {
 }
 
 export async function parseJsonlFile(filePath: string, fromOffset = 0): Promise<ParseResult> {
+  // Detect line terminator style by peeking at the first 512 bytes of the file.
+  // readline strips terminators before yielding lines, so we must add back the correct byte count
+  // per line (1 for LF, 2 for CRLF) when computing endOffset for incremental tail reads.
+  let lineTermBytes = 1; // LF default (macOS/Linux)
+  try {
+    const buf = Buffer.allocUnsafe(512);
+    const fd = require("node:fs").openSync(filePath, "r");
+    const bytesRead = require("node:fs").readSync(fd, buf, 0, 512, 0);
+    require("node:fs").closeSync(fd);
+    if (buf.slice(0, bytesRead).indexOf("\r\n") !== -1) lineTermBytes = 2; // CRLF (Windows)
+  } catch { /* file may not exist yet; leave LF default */ }
+
   const stream = createReadStream(filePath, { encoding: "utf8", start: fromOffset });
   const rl = createInterface({ input: stream, crlfDelay: Infinity });
   const r: ParseResult = {
@@ -47,7 +59,7 @@ export async function parseJsonlFile(filePath: string, fromOffset = 0): Promise<
   const META_TYPES = new Set(["last-prompt", "permission-mode", "summary", "compact-marker"]);
   let bytes = fromOffset;
   for await (const raw of rl) {
-    bytes += Buffer.byteLength(raw, "utf8") + 1;
+    bytes += Buffer.byteLength(raw, "utf8") + lineTermBytes;
     const line = raw.trim();
     if (!line) continue;
     let obj: any;
