@@ -2,6 +2,7 @@ import { getDb } from "@/lib/db";
 import { runClaude } from "@/lib/ai/runClaude";
 import { bus } from "@/lib/bus";
 import { postWebhook } from "@/lib/notify/webhook";
+import { recomputeProjectHealth, recomputeSessionHealth } from "@/lib/health/recompute";
 
 export type RunOpts = { bin?: string; args?: string[]; timeoutMs?: number };
 
@@ -63,6 +64,17 @@ Reply ONLY with JSON: {"status":"ok"|"alert","message":"<1 sentence>","recommend
 
     bus.emit(status === "alert" ? "watcher:alert" : "watcher:done", { watcherId, runId, status });
     bus.emit("feed:new", { kind: feedKind, watcherId, name: w.name, status, message: parsed.message });
+
+    // Recompute pet health so the watcher status is reflected immediately in the UI.
+    try {
+      if (w.scope === "session" && w.target_id) {
+        recomputeSessionHealth(w.target_id);
+        const row = db.prepare("SELECT project_id FROM sessions WHERE id=?").get(w.target_id) as any;
+        if (row) recomputeProjectHealth(row.project_id);
+      } else if (w.scope === "project" && w.target_id) {
+        recomputeProjectHealth(w.target_id);
+      }
+    } catch { /* health recompute is best-effort */ }
 
     if (status === "alert") {
       const url = w.notify_webhook ?? (db.prepare("SELECT value FROM settings WHERE key='notify_webhook'").get() as any)?.value;
