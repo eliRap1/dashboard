@@ -19,7 +19,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const cols = ["name","prompt","trigger_kind","trigger_value","enabled","notify_webhook"].filter(c => c in body);
   if (cols.length === 0) return NextResponse.json({ error: "no fields" }, { status: 400 });
   const sql = `UPDATE watchers SET ${cols.map(c => `${c}=?`).join(",")} WHERE id=?`;
-  getDb().prepare(sql).run(...cols.map(c => body[c]), params.id);
+  // Coerce `enabled` boolean → 0/1 so SQLite stores it as INTEGER not a JS boolean literal.
+  const vals = cols.map(c => c === "enabled" ? (body[c] ? 1 : 0) : body[c]);
+  getDb().prepare(sql).run(...vals, params.id);
   const w = getDb().prepare("SELECT * FROM watchers WHERE id=?").get(params.id) as any;
   registerCronWatcher(w);
   return NextResponse.json({ ...w });
