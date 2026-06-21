@@ -5,7 +5,7 @@ import { rowToPet } from "@/components/pet-utils";
 async function fetchProjects(): Promise<any[]> {
   try {
     const h = headers();
-    const host = h.get("host");
+    const host = h.get("host") ?? "127.0.0.1:3000";
     const res = await fetch(`http://${host}/api/projects`, { cache: "no-store" });
     if (!res.ok) return [];
     const j = await res.json();

@@ -6,7 +6,7 @@ import { OpenInClaudeButton } from "@/components/OpenInClaudeButton";
 import { RegenerateSummaryButton } from "@/components/RegenerateSummaryButton";
 
 async function fetchSession(id: string) {
-  const h = headers().get("host");
+  const h = headers().get("host") ?? "127.0.0.1:3000";
   const [meta, msgs] = await Promise.all([
     fetch(`http://${h}/api/sessions/${id}`,          { cache: "no-store" }).then(r => r.json()),
     fetch(`http://${h}/api/sessions/${id}/messages`, { cache: "no-store" }).then(r => r.json())
