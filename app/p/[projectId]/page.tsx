@@ -8,7 +8,7 @@ import { TasksPanel } from "@/components/TasksPanel";
 async function fetchSessions(id: string): Promise<any[]> {
   try {
     const h = headers();
-    const res = await fetch(`http://${h.get("host")}/api/projects/${id}/sessions`, { cache: "no-store" });
+    const res = await fetch(`http://${h.get("host") ?? "127.0.0.1:3000"}/api/projects/${id}/sessions`, { cache: "no-store" });
     if (!res.ok) return [];
     const j = await res.json();
     return Array.isArray(j) ? j : [];
