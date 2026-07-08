@@ -17,7 +17,7 @@ export function LiveTailPanel({ sessionId }: { sessionId: string }) {
       .then(r => r.json())
       .then((all: Msg[]) => {
         if (cancelled || !Array.isArray(all)) return;
-        setMsgs(all.slice(-30));
+        setMsgs(curr => curr.length > 0 ? curr : all.slice(-30));
         requestAnimationFrame(() => ref.current?.scrollTo({ top: ref.current.scrollHeight }));
       })
       .catch(() => {});

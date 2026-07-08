@@ -38,7 +38,12 @@ export function openTerminal(o: OpenOpts): { platform: string; ok: boolean; erro
       return { platform: "win32", ok: true };
     }
     if (process.platform === "darwin") {
-      const script = `tell application "Terminal" to do script "cd ${cwd.replace(/"/g, '\\"')} && ${command}"`;
+      // Embed cwd as an AppleScript string literal (escape \ and " for AppleScript),
+      // then use AppleScript's `quoted form of` to produce a safely shell-quoted path.
+      // This prevents metacharacters like backticks, $(), or ; in the directory name
+      // from being interpreted by the shell inside Terminal.
+      const asPath = cwd.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+      const script = `tell application "Terminal" to do script "cd " & quoted form of "${asPath}" & " && ${command}"`;
       const child = spawn("osascript", ["-e", script], { detached: true, stdio: "ignore" });
       child.unref();
       return { platform: "darwin", ok: true };
