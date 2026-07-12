@@ -6,12 +6,17 @@ import { OpenInClaudeButton } from "@/components/OpenInClaudeButton";
 import { RegenerateSummaryButton } from "@/components/RegenerateSummaryButton";
 
 async function fetchSession(id: string) {
-  const h = headers().get("host");
-  const [meta, msgs] = await Promise.all([
-    fetch(`http://${h}/api/sessions/${id}`,          { cache: "no-store" }).then(r => r.json()),
-    fetch(`http://${h}/api/sessions/${id}/messages`, { cache: "no-store" }).then(r => r.json())
-  ]);
-  return { meta, msgs };
+  try {
+    const h = headers().get("host");
+    if (!h) return { meta: { error: "no host" }, msgs: [] };
+    const [meta, msgs] = await Promise.all([
+      fetch(`http://${h}/api/sessions/${id}`,          { cache: "no-store" }).then(r => r.json()),
+      fetch(`http://${h}/api/sessions/${id}/messages`, { cache: "no-store" }).then(r => r.json())
+    ]);
+    return { meta, msgs };
+  } catch {
+    return { meta: { error: "fetch failed" }, msgs: [] };
+  }
 }
 
 export default async function SessionPage({ params }: { params: { sessionId: string } }) {
