@@ -23,7 +23,7 @@ export async function syncLiveOnce(): Promise<void> {
       const j = JSON.parse(raw);
       if (!j.pid || !j.sessionId) continue;
       seen.add(j.pid);
-      upsert.run(j.pid, j.sessionId, j.cwd, j.status ?? null, j.updatedAt ?? Date.now());
+      upsert.run(j.pid, j.sessionId, j.cwd ?? "", j.status ?? null, j.updatedAt ?? Date.now());
     } catch { /* skip */ }
   }
 
