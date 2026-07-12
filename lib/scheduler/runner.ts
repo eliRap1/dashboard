@@ -9,7 +9,11 @@ let activeWatchers = 0;
 function caps() {
   const v = (getDb().prepare("SELECT value FROM settings WHERE key='concurrency_caps'").get() as any)?.value
          ?? '{"watchers":3,"summaries":2}';
-  return JSON.parse(v) as { watchers: number; summaries: number };
+  try {
+    return JSON.parse(v) as { watchers: number; summaries: number };
+  } catch {
+    return { watchers: 3, summaries: 2 };
+  }
 }
 
 function targetCwd(scope: string, targetId: string | null): string {
