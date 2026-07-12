@@ -23,7 +23,9 @@ export function SearchBar() {
           <li key={i} className="border-2 border-stone-900 rounded-md p-3 bg-white">
             <div className="text-xs text-stone-500">{new Date(h.ts).toLocaleString()} - {h.role}</div>
             <a className="underline text-sm" href={`/s/${h.session_id}`}>session {h.session_id.slice(0, 8)}</a>
-            <div className="font-mono text-xs mt-1" dangerouslySetInnerHTML={{ __html: h.snippet }} />
+            <div className="font-mono text-xs mt-1" dangerouslySetInnerHTML={{ __html: h.snippet
+              .replace(/</g, "&lt;").replace(/>/g, "&gt;")
+              .replace(/&lt;mark&gt;/g, "<mark>").replace(/&lt;\/mark&gt;/g, "</mark>") }} />
           </li>
         ))}
       </ul>
