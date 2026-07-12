@@ -10,7 +10,6 @@ export function sessionsDir(): string { return path.join(claudeHome(), "sessions
 export function plansDir():    string { return path.join(claudeHome(), "plans"); }
 export function todosDir():    string { return path.join(claudeHome(), "todos"); }
 export function tasksDir():    string { return path.join(claudeHome(), "tasks"); }
-export function agentsDir():   string { return path.join(claudeHome(), "agents"); }
 
 export function encodeCwdToProjectsDir(cwd: string): string {
   return cwd
