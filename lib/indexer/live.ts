@@ -13,9 +13,14 @@ export async function syncLiveOnce(): Promise<void> {
   try { entries = (await fs.readdir(dir)).filter(f => f.endsWith(".json")); } catch { entries = []; }
 
   const seen = new Set<number>();
+  // Also update session_id and cwd on conflict: PIDs can be reused by the OS, so a new Claude
+  // process may arrive with the same PID as a previously-seen one. Without updating these
+  // columns the stale session/cwd would persist indefinitely.
   const upsert = db.prepare(`
     INSERT INTO live_sessions(pid, session_id, cwd, status, updated_at) VALUES (?,?,?,?,?)
-    ON CONFLICT(pid) DO UPDATE SET status=excluded.status, updated_at=excluded.updated_at
+    ON CONFLICT(pid) DO UPDATE SET
+      session_id=excluded.session_id, cwd=excluded.cwd,
+      status=excluded.status, updated_at=excluded.updated_at
   `);
   for (const f of entries) {
     try {
