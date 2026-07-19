@@ -13,7 +13,10 @@ export function WatcherForm({ onCreated }: { onCreated: (w: any) => void }) {
   const [name, setName]                   = useState("");
   const [prompt, setPrompt]               = useState("");
   const [trigger_kind, setKind]           = useState<"cron" | "event">("cron");
-  const [trigger_value, setVal]           = useState("0 */30 * * *");
+  // "0 */30 * * *" was the original default but matches no dropdown option and fires only once
+  // a day (at minute 0 of the 0th and 30th hour, but hour 30 doesn't exist, so effectively
+  // only midnight). The intended default is "every 30 minutes" = "*/30 * * * *".
+  const [trigger_value, setVal]           = useState("*/30 * * * *");
   const [enabled, setEnabled]             = useState(true);
   const [notify_webhook, setHook]         = useState("");
 
