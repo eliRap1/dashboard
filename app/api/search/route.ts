@@ -19,7 +19,14 @@ export async function GET(req: Request) {
   if (since) { conds.push("ts >= ?");   args.push(parseInt(since, 10)); }
   const sql = `SELECT session_id, role, snippet(messages_fts, 2, '<mark>', '</mark>', '…', 12) AS snippet, ts
                FROM messages_fts WHERE ${conds.join(" AND ")} ORDER BY ts DESC LIMIT 200`;
-  let rows = getDb().prepare(sql).all(...args).map((r: any) => ({ ...r }));
+  // FTS5 parses `q` as its own query syntax; malformed input (e.g. a lone `"` or `OR OR`)
+  // throws a SQLite error. Catch it and return empty results rather than a 500.
+  let rows: any[];
+  try {
+    rows = getDb().prepare(sql).all(...args).map((r: any) => ({ ...r }));
+  } catch {
+    return NextResponse.json([]);
+  }
   if (projectId) {
     const ids = new Set(
       (getDb().prepare("SELECT id FROM sessions WHERE project_id=?").all(projectId) as any[])
