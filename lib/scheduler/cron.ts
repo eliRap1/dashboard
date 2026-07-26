@@ -23,3 +23,8 @@ export function reloadAllCronWatchers() {
   const all = getDb().prepare("SELECT id, trigger_kind, trigger_value, enabled FROM watchers WHERE trigger_kind='cron'").all() as any[];
   all.forEach(registerCronWatcher);
 }
+
+/** Returns true if expr is a valid node-cron expression. Exposed so API routes can validate before storing. */
+export function isValidCronExpression(expr: string): boolean {
+  return cron.validate(expr);
+}

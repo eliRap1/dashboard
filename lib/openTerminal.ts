@@ -38,7 +38,9 @@ export function openTerminal(o: OpenOpts): { platform: string; ok: boolean; erro
       return { platform: "win32", ok: true };
     }
     if (process.platform === "darwin") {
-      const script = `tell application "Terminal" to do script "cd ${cwd.replace(/"/g, '\\"')} && ${command}"`;
+      const script = `tell application "Terminal" to do script "cd ${cwd.replace(/"/g, '\\"')} && ${command.replace(/"/g, '\\"')}"`;
+      // TODO(audit): shell metacharacters in command (backticks, $(), etc.) are still not escaped here.
+      // Full sanitisation would require base64-encoding the command or using a launcher script.
       const child = spawn("osascript", ["-e", script], { detached: true, stdio: "ignore" });
       child.unref();
       return { platform: "darwin", ok: true };
