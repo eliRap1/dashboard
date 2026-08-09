@@ -56,7 +56,15 @@ async function onJsonlChange(filePath: string) {
   }
 }
 
-const onJsonlDebounced = debounce((p: string) => { onJsonlChange(p).catch(() => {}); }, 250);
+const _jsonlTimers = new Map<string, NodeJS.Timeout>();
+function onJsonlDebounced(p: string) {
+  const existing = _jsonlTimers.get(p);
+  if (existing) clearTimeout(existing);
+  _jsonlTimers.set(p, setTimeout(() => {
+    _jsonlTimers.delete(p);
+    onJsonlChange(p).catch(() => {});
+  }, 250));
+}
 
 function classify(p: string) {
   if (p.endsWith(".jsonl")) onJsonlDebounced(p);

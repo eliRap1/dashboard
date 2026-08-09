@@ -11,7 +11,7 @@ import { summarizeSession } from "@/lib/ai/summarize";
 
 declare global {
   // eslint-disable-next-line no-var
-  var __dashboardBooted: boolean | undefined;
+  var __dashboardBootPromise: Promise<void> | undefined;
 }
 
 const MIN_MSGS_FOR_SUMMARY = 5;
@@ -30,9 +30,7 @@ async function maybeAutoSummarize(sessionId: string) {
   finally { summarizing.delete(sessionId); }
 }
 
-export async function ensureBoot(): Promise<void> {
-  if (globalThis.__dashboardBooted) return;
-  globalThis.__dashboardBooted = true;
+async function _boot(): Promise<void> {
   getDb();
   await scanAll();
   startLivePolling(2000);
@@ -52,4 +50,14 @@ export async function ensureBoot(): Promise<void> {
 
   bus.on("session:msg", (d: any) => { recomputeForSession(d.sessionId); autoSummarize(d.sessionId); });
   bus.on("session:new", (d: any) => { recomputeForSession(d.sessionId); autoSummarize(d.sessionId); });
+}
+
+export function ensureBoot(): Promise<void> {
+  if (!globalThis.__dashboardBootPromise) {
+    globalThis.__dashboardBootPromise = _boot();
+  }
+  // All concurrent callers await the same Promise; none proceeds until boot
+  // completes, eliminating the TOCTOU race where a second request would see
+  // the old boolean flag as true while async init was still in flight.
+  return globalThis.__dashboardBootPromise;
 }
