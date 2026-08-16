@@ -9,11 +9,6 @@ import { recomputeProjectHealth, recomputeSessionHealth } from "@/lib/health/rec
 import { debounce } from "@/lib/watcher/debounce";
 import { summarizeSession } from "@/lib/ai/summarize";
 
-declare global {
-  // eslint-disable-next-line no-var
-  var __dashboardBooted: boolean | undefined;
-}
-
 const MIN_MSGS_FOR_SUMMARY = 5;
 const summarizing = new Set<string>();
 
@@ -30,9 +25,18 @@ async function maybeAutoSummarize(sessionId: string) {
   finally { summarizing.delete(sessionId); }
 }
 
-export async function ensureBoot(): Promise<void> {
-  if (globalThis.__dashboardBooted) return;
-  globalThis.__dashboardBooted = true;
+// Module-level promise so concurrent callers share one boot sequence.
+// TODO(audit): recomputeForSession/autoSummarize debounces are shared across
+// all sessions; only the last caller's sessionId survives the debounce window.
+// Fix: use per-sessionId debounce maps.
+let _bootPromise: Promise<void> | undefined;
+
+export function ensureBoot(): Promise<void> {
+  if (!_bootPromise) _bootPromise = _doBoot();
+  return _bootPromise;
+}
+
+async function _doBoot(): Promise<void> {
   getDb();
   await scanAll();
   startLivePolling(2000);
