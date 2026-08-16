@@ -27,7 +27,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 export async function DELETE(_: Request, { params }: { params: { id: string } }) {
   await ensureBoot();
   unregisterCron(parseInt(params.id, 10));
-  getDb().prepare("DELETE FROM watcher_runs WHERE watcher_id=?").run(params.id);
-  getDb().prepare("DELETE FROM watchers WHERE id=?").run(params.id);
+  getDb().transaction(() => {
+    getDb().prepare("DELETE FROM watcher_runs WHERE watcher_id=?").run(params.id);
+    getDb().prepare("DELETE FROM watchers WHERE id=?").run(params.id);
+  })();
   return NextResponse.json({ ok: true });
 }
