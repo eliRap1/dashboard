@@ -24,7 +24,9 @@ export function WatcherForm({ onCreated }: { onCreated: (w: any) => void }) {
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ scope, target_id: targetId || null, name, prompt, trigger_kind, trigger_value, enabled, notify_webhook: notify_webhook || null })
       });
-      onCreated(await r.json());
+      const data = await r.json();
+      if (!r.ok) { alert(`Error: ${data?.error ?? r.status}`); return; }
+      onCreated(data);
     }} className="grid gap-2 border-2 border-stone-900 rounded-md p-3 bg-amber-50">
       <div className="grid grid-cols-3 gap-2">
         <select value={scope} onChange={e => setScope(e.target.value)} className="border p-1">

@@ -38,7 +38,11 @@ export function openTerminal(o: OpenOpts): { platform: string; ok: boolean; erro
       return { platform: "win32", ok: true };
     }
     if (process.platform === "darwin") {
-      const script = `tell application "Terminal" to do script "cd ${cwd.replace(/"/g, '\\"')} && ${command}"`;
+      // Escape backslashes first, then double-quotes, so a trailing \ in cwd
+      // cannot consume the closing \" and break the AppleScript string boundary.
+      const escapedCwd = cwd.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      const escapedCmd = command.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      const script = `tell application "Terminal" to do script "cd ${escapedCwd} && ${escapedCmd}"`;
       const child = spawn("osascript", ["-e", script], { detached: true, stdio: "ignore" });
       child.unref();
       return { platform: "darwin", ok: true };

@@ -7,7 +7,12 @@ function readSettings() {
   const db = getDb();
   const get = (k: string, fb: string) =>
     (db.prepare("SELECT value FROM settings WHERE key=?").get(k) as any)?.value ?? fb;
-  const weights = JSON.parse(get("health_weights", '{"activity":0.4,"errors":0.3,"watcher":0.2,"tokens":0.1}')) as Weights;
+  let weights: Weights;
+  try {
+    weights = JSON.parse(get("health_weights", '{"activity":0.4,"errors":0.3,"watcher":0.2,"tokens":0.1}')) as Weights;
+  } catch {
+    weights = { activity: 0.4, errors: 0.3, watcher: 0.2, tokens: 0.1 };
+  }
   const quota = parseInt(get("quota_threshold", "5000000"), 10);
   const strategy = get("project_hp_strategy", "max") as "max" | "avg";
   return { weights, quota, strategy };
