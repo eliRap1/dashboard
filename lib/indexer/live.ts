@@ -21,7 +21,7 @@ export async function syncLiveOnce(): Promise<void> {
     try {
       const raw = await fs.readFile(path.join(dir, f), "utf8");
       const j = JSON.parse(raw);
-      if (!j.pid || !j.sessionId) continue;
+      if (!j.pid || !j.sessionId || !j.cwd) continue;
       seen.add(j.pid);
       upsert.run(j.pid, j.sessionId, j.cwd, j.status ?? null, j.updatedAt ?? Date.now());
     } catch { /* skip */ }
