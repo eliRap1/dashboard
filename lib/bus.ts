@@ -14,7 +14,7 @@ function makeBus(): EventEmitter {
 export const bus: EventEmitter = globalThis.__dashboardBus ?? (globalThis.__dashboardBus = makeBus());
 
 export type BusEvents =
-  | "session:new" | "session:msg" | "session:error" | "session:end"
+  | "session:new" | "session:msg" | "session:error"
   | "live:change" | "live:gone"
   | "watcher:run-started" | "watcher:done" | "watcher:alert"
   | "feed:new" | "health:change"
