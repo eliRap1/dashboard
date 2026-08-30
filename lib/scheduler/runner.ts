@@ -24,6 +24,12 @@ export async function runWatcher(watcherId: number, opts: RunOpts = {}, ctx?: an
   const w = db.prepare("SELECT * FROM watchers WHERE id=?").get(watcherId) as any;
   if (!w || !w.enabled) return;
   if (activeWatchers >= caps().watchers) {
+    const skipPayload = JSON.stringify({ watcherId, name: w.name });
+    db.prepare(`INSERT INTO feed(ts,kind,project_id,session_id,payload) VALUES(?,?,?,?,?)`)
+      .run(Date.now(), "watcher_skipped_capacity",
+           w.scope === "project" ? w.target_id : null,
+           w.scope === "session" ? w.target_id : null,
+           skipPayload);
     bus.emit("feed:new", { kind: "watcher_skipped_capacity", watcherId });
     return;
   }
