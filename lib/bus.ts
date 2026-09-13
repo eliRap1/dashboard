@@ -16,6 +16,6 @@ export const bus: EventEmitter = globalThis.__dashboardBus ?? (globalThis.__dash
 export type BusEvents =
   | "session:new" | "session:msg" | "session:error" | "session:end"
   | "live:change" | "live:gone"
-  | "watcher:run-started" | "watcher:done" | "watcher:alert"
+  | "watcher:run-started" | "watcher:done" | "watcher:alert" | "watcher:skipped_capacity"
   | "feed:new" | "health:change"
   | "plan:change" | "todo:change" | "task:change";
