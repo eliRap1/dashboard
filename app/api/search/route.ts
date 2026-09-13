@@ -15,17 +15,11 @@ export async function GET(req: Request) {
   if (!q) return NextResponse.json([]);
   const conds: string[] = []; const args: any[] = [];
   conds.push("messages_fts MATCH ?"); args.push(q);
+  if (projectId) { conds.push("session_id IN (SELECT id FROM sessions WHERE project_id=?)"); args.push(projectId); }
   if (role)  { conds.push("role = ?");  args.push(role); }
   if (since) { conds.push("ts >= ?");   args.push(parseInt(since, 10)); }
   const sql = `SELECT session_id, role, snippet(messages_fts, 2, '<mark>', '</mark>', '…', 12) AS snippet, ts
                FROM messages_fts WHERE ${conds.join(" AND ")} ORDER BY ts DESC LIMIT 200`;
-  let rows = getDb().prepare(sql).all(...args).map((r: any) => ({ ...r }));
-  if (projectId) {
-    const ids = new Set(
-      (getDb().prepare("SELECT id FROM sessions WHERE project_id=?").all(projectId) as any[])
-        .map((r: any) => r.id)
-    );
-    rows = rows.filter((r: any) => ids.has(r.session_id));
-  }
+  const rows = getDb().prepare(sql).all(...args).map((r: any) => ({ ...r }));
   return NextResponse.json(rows);
 }

@@ -16,18 +16,27 @@ declare global {
 
 const MIN_MSGS_FOR_SUMMARY = 5;
 const summarizing = new Set<string>();
+let activeSummaries = 0;
+
+function summaryCap(): number {
+  const v = (getDb().prepare("SELECT value FROM settings WHERE key='concurrency_caps'").get() as any)?.value
+           ?? '{"watchers":3,"summaries":2}';
+  return (JSON.parse(v) as { watchers: number; summaries: number }).summaries ?? 2;
+}
 
 async function maybeAutoSummarize(sessionId: string) {
   if (summarizing.has(sessionId)) return;
+  if (activeSummaries >= summaryCap()) return;
   const db = getDb();
   const s = db.prepare("SELECT msg_count FROM sessions WHERE id=?").get(sessionId) as any;
   if (!s || s.msg_count < MIN_MSGS_FOR_SUMMARY) return;
   const existing = db.prepare("SELECT session_id FROM summaries WHERE session_id=?").get(sessionId);
   if (existing) return;
   summarizing.add(sessionId);
+  activeSummaries++;
   try { await summarizeSession(sessionId); }
   catch { /* surface via feed already */ }
-  finally { summarizing.delete(sessionId); }
+  finally { summarizing.delete(sessionId); activeSummaries--; }
 }
 
 export async function ensureBoot(): Promise<void> {
