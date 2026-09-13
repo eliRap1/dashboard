@@ -19,10 +19,14 @@ export function encodeCwdToProjectsDir(cwd: string): string {
     .replace(/\s+/g, "-");
 }
 
+// TODO: this guard has a prefix-collision bug — /home/user/.claude-evil would
+// pass the startsWith check.  Fix by appending path.sep to the root before
+// comparing.  Also, this function is currently never called — wire it into
+// any route that accepts a user-supplied path (e.g. obsidian reader/writer).
 export function assertUnderClaudeHome(p: string): void {
-  const root = claudeHome();
+  const root = path.resolve(claudeHome()) + path.sep;
   const resolved = path.resolve(p);
-  if (!resolved.startsWith(path.resolve(root))) {
+  if (!resolved.startsWith(root) && resolved !== path.resolve(claudeHome())) {
     throw new Error(`path is outside claude home`);
   }
 }
