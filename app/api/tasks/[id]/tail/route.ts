@@ -20,6 +20,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   try { cfg = JSON.parse(t.config); } catch { /* empty */ }
   const file: string = cfg.file_path;
   if (!file) return NextResponse.json({ error: "config.file_path missing" }, { status: 400 });
+  // TODO: call assertUnderClaudeHome(file) from lib/paths.ts to restrict reads to ~/.claude/
+  // when the project wants to tighten the surface area beyond single-user trust.
 
   const enc = new TextEncoder();
   let offset = 0;

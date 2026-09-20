@@ -5,7 +5,7 @@ import { plansDir, projectsDir, sessionsDir, todosDir, tasksDir } from "@/lib/pa
 import { bus } from "@/lib/bus";
 import { debounce } from "@/lib/watcher/debounce";
 import { parseJsonlFile } from "@/lib/indexer/jsonl";
-import { isInternalSessionMessages } from "@/lib/indexer/scan";
+import { isInternalSessionMessages, decodeProjectDir } from "@/lib/indexer/scan";
 import { getDb } from "@/lib/db";
 
 let watcher: FSWatcher | null = null;
@@ -13,9 +13,7 @@ let watcher: FSWatcher | null = null;
 async function onJsonlChange(filePath: string) {
   const sessionId = path.basename(filePath, ".jsonl");
   const projectDirName = path.basename(path.dirname(filePath));
-  const cwd = /^[A-Za-z]--/.test(projectDirName)
-    ? projectDirName.replace(/^([A-Za-z])--/, "$1:\\").replace(/-/g, "\\")
-    : "/" + projectDirName.replace(/^-/, "").replace(/-/g, "/");
+  const cwd = decodeProjectDir(projectDirName);
   const projectId = crypto.createHash("sha1").update(cwd).digest("hex").slice(0, 16);
   const db = getDb();
   const existed = db.prepare("SELECT id, tail_offset, is_internal FROM sessions WHERE id=?").get(sessionId) as any;
