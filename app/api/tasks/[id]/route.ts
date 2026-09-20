@@ -5,9 +5,14 @@ import { ensureBoot } from "@/lib/singletons";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+const VALID_KINDS = ["open_url", "run_command", "tail_log"] as const;
+
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   await ensureBoot();
   const body = await req.json();
+  if ("kind" in body && !VALID_KINDS.includes(body.kind)) {
+    return NextResponse.json({ error: "bad kind" }, { status: 400 });
+  }
   const cols = ["name", "kind", "config"].filter(c => c in body);
   if (cols.length === 0) return NextResponse.json({ error: "no fields" }, { status: 400 });
   const sql = `UPDATE project_tasks SET ${cols.map(c => `${c}=?`).join(",")} WHERE id=?`;
