@@ -19,7 +19,7 @@ export function getDb(): Db {
 }
 
 function runMigrations(db: Db) {
-  const sqlPath = path.resolve(process.cwd(), "lib/migrations/001_init.sql");
+  const sqlPath = new URL("./migrations/001_init.sql", import.meta.url).pathname;
   const sql = fs.readFileSync(sqlPath, "utf-8");
   db.exec(sql);
   // Idempotent column adds for upgrading old DB files (sqlite has no IF NOT EXISTS for columns).
