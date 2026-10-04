@@ -27,12 +27,12 @@ export async function runWatcher(watcherId: number, opts: RunOpts = {}, ctx?: an
     bus.emit("feed:new", { kind: "watcher_skipped_capacity", watcherId });
     return;
   }
-  activeWatchers++;
   const startedAt = Date.now();
   const runId = db.prepare(`INSERT INTO watcher_runs(watcher_id,started_at,status) VALUES (?,?,?)`)
     .run(watcherId, startedAt, "running").lastInsertRowid as number;
   bus.emit("watcher:run-started", { watcherId, runId });
   try {
+    activeWatchers++;
     const cwd = targetCwd(w.scope, w.target_id);
     const prompt = `You are a watcher named "${w.name}" (scope=${w.scope}).
 User instruction: ${w.prompt}
