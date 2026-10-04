@@ -1,5 +1,5 @@
 import fs from "node:fs/promises";
-import { getDb } from "@/lib/db";
+import { getDb, tx } from "@/lib/db";
 import { runClaude } from "@/lib/ai/runClaude";
 import { bus } from "@/lib/bus";
 
@@ -38,15 +38,17 @@ ${PROMPT_FOOTER}`;
     parsed = { title: "(parse failed)", summary: r.stdout.slice(0, 400), recommendation: "none" };
   }
 
-  db.prepare(`INSERT INTO summaries(session_id,title,summary,recommendation,generated_at,generator)
-              VALUES (?,?,?,?,?,?)
-              ON CONFLICT(session_id) DO UPDATE SET title=excluded.title,summary=excluded.summary,
-                recommendation=excluded.recommendation,generated_at=excluded.generated_at,generator=excluded.generator`)
-    .run(sessionId, parsed.title ?? null, parsed.summary ?? null, parsed.recommendation ?? null, Date.now(), "claude -p");
+  tx(db, () => {
+    db.prepare(`INSERT INTO summaries(session_id,title,summary,recommendation,generated_at,generator)
+                VALUES (?,?,?,?,?,?)
+                ON CONFLICT(session_id) DO UPDATE SET title=excluded.title,summary=excluded.summary,
+                  recommendation=excluded.recommendation,generated_at=excluded.generated_at,generator=excluded.generator`)
+      .run(sessionId, parsed.title ?? null, parsed.summary ?? null, parsed.recommendation ?? null, Date.now(), "claude -p");
 
-  db.prepare("DELETE FROM summaries_fts WHERE session_id=?").run(sessionId);
-  db.prepare("INSERT INTO summaries_fts(session_id,title,summary,recommendation) VALUES (?,?,?,?)")
-    .run(sessionId, parsed.title ?? "", parsed.summary ?? "", parsed.recommendation ?? "");
+    db.prepare("DELETE FROM summaries_fts WHERE session_id=?").run(sessionId);
+    db.prepare("INSERT INTO summaries_fts(session_id,title,summary,recommendation) VALUES (?,?,?,?)")
+      .run(sessionId, parsed.title ?? "", parsed.summary ?? "", parsed.recommendation ?? "");
+  });
 
   if (parsed.advice) {
     db.prepare("UPDATE pet_health SET ai_advice=? WHERE scope='session' AND target_id=?").run(parsed.advice, sessionId);

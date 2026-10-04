@@ -26,3 +26,4 @@ export function assertUnderClaudeHome(p: string): void {
     throw new Error(`path is outside claude home`);
   }
 }
+// TODO(audit): wire assertUnderClaudeHome in any other path that reads from cfg.file_path
