@@ -1,4 +1,6 @@
 import { spawn } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 export type OpenOpts = {
@@ -21,9 +23,7 @@ export function openTerminal(o: OpenOpts): { platform: string; ok: boolean; erro
 
   try {
     if (process.platform === "win32") {
-      const fs = require("node:fs") as typeof import("node:fs");
-      const os = require("node:os") as typeof import("node:os");
-      const tmp = path.join(os.tmpdir(), `dashboard-launch-${Date.now()}-${Math.random().toString(36).slice(2,8)}.bat`);
+      const tmp = path.join(os.tmpdir(), `dashboard-launch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.bat`);
       const bat = [
         "@echo off",
         `cd /d "${cwd}"`,
@@ -38,7 +38,14 @@ export function openTerminal(o: OpenOpts): { platform: string; ok: boolean; erro
       return { platform: "win32", ok: true };
     }
     if (process.platform === "darwin") {
-      const script = `tell application "Terminal" to do script "cd ${cwd.replace(/"/g, '\\"')} && ${command}"`;
+      // Write a temp shell script so neither cwd nor command are interpolated
+      // into an AppleScript/shell string (prevents AppleScript/shell injection).
+      const tmp = path.join(
+        os.tmpdir(),
+        `dashboard-launch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.sh`,
+      );
+      fs.writeFileSync(tmp, `#!/bin/sh\ncd ${JSON.stringify(cwd)} && ${command}\n`, { mode: 0o700 });
+      const script = `tell application "Terminal" to do script ${JSON.stringify(`exec /bin/sh ${tmp}`)}`;
       const child = spawn("osascript", ["-e", script], { detached: true, stdio: "ignore" });
       child.unref();
       return { platform: "darwin", ok: true };

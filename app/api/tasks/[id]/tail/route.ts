@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "node:fs";
 import fsp from "node:fs/promises";
+import path from "node:path";
 import chokidar from "chokidar";
 import { getDb } from "@/lib/db";
 import { ensureBoot } from "@/lib/singletons";
@@ -12,7 +13,9 @@ const MAX_TAIL_BYTES = 100_000;
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   await ensureBoot();
-  const t = getDb().prepare("SELECT * FROM project_tasks WHERE id=?").get(params.id) as any;
+  const t = getDb()
+    .prepare("SELECT t.*, p.cwd AS pcwd FROM project_tasks t JOIN projects p ON p.id=t.project_id WHERE t.id=?")
+    .get(params.id) as any;
   if (!t || t.kind !== "tail_log") {
     return NextResponse.json({ error: "task not a tail_log" }, { status: 400 });
   }
@@ -20,6 +23,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   try { cfg = JSON.parse(t.config); } catch { /* empty */ }
   const file: string = cfg.file_path;
   if (!file) return NextResponse.json({ error: "config.file_path missing" }, { status: 400 });
+
+  // Prevent path traversal: the log file must be inside the project's cwd.
+  const resolvedFile = path.resolve(file);
+  const resolvedCwd = path.resolve(t.pcwd ?? "");
+  if (!resolvedFile.startsWith(resolvedCwd + path.sep) && resolvedFile !== resolvedCwd) {
+    return NextResponse.json({ error: "file_path is outside the project directory" }, { status: 403 });
+  }
 
   const enc = new TextEncoder();
   let offset = 0;
