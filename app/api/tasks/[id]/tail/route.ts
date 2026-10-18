@@ -49,12 +49,15 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           if (st.size < offset) { offset = 0; }
           if (st.size === offset) return;
           const fd = await fsp.open(file, "r");
-          const len = st.size - offset;
-          const b = Buffer.allocUnsafe(len);
-          await fd.read(b, 0, len, offset);
-          await fd.close();
-          offset = st.size;
-          sendChunk(b.toString("utf8"));
+          try {
+            const len = st.size - offset;
+            const b = Buffer.allocUnsafe(len);
+            await fd.read(b, 0, len, offset);
+            offset = st.size;
+            sendChunk(b.toString("utf8"));
+          } finally {
+            await fd.close();
+          }
         } catch (e: any) { sendErr(String(e)); }
       };
       watcher.on("change", onChange);
