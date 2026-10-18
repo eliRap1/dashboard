@@ -40,16 +40,34 @@ export async function ensureBoot(): Promise<void> {
   startEventRouter();
   reloadAllCronWatchers();
 
-  const recomputeForSession = debounce((sid: string) => {
-    try {
-      recomputeSessionHealth(sid);
-      const row = getDb().prepare("SELECT project_id FROM sessions WHERE id=?").get(sid) as any;
-      if (row) recomputeProjectHealth(row.project_id);
-    } catch { /* ignore */ }
+  // Accumulate session IDs so the debounce flush processes ALL sessions that
+  // fired within the window, not just the last one to cancel-and-reset the timer.
+  const pendingHealth = new Set<string>();
+  const flushHealth = debounce(() => {
+    const sessions = [...pendingHealth];
+    pendingHealth.clear();
+    for (const sid of sessions) {
+      try {
+        recomputeSessionHealth(sid);
+        const row = getDb().prepare("SELECT project_id FROM sessions WHERE id=?").get(sid) as any;
+        if (row) recomputeProjectHealth(row.project_id);
+      } catch { /* ignore */ }
+    }
   }, 5000);
 
-  const autoSummarize = debounce((sid: string) => { maybeAutoSummarize(sid).catch(() => {}); }, 30_000);
+  const pendingAutoSummarize = new Set<string>();
+  const flushAutoSummarize = debounce(() => {
+    const sessions = [...pendingAutoSummarize];
+    pendingAutoSummarize.clear();
+    for (const sid of sessions) maybeAutoSummarize(sid).catch(() => {});
+  }, 30_000);
 
-  bus.on("session:msg", (d: any) => { recomputeForSession(d.sessionId); autoSummarize(d.sessionId); });
-  bus.on("session:new", (d: any) => { recomputeForSession(d.sessionId); autoSummarize(d.sessionId); });
+  bus.on("session:msg", (d: any) => {
+    pendingHealth.add(d.sessionId); flushHealth();
+    pendingAutoSummarize.add(d.sessionId); flushAutoSummarize();
+  });
+  bus.on("session:new", (d: any) => {
+    pendingHealth.add(d.sessionId); flushHealth();
+    pendingAutoSummarize.add(d.sessionId); flushAutoSummarize();
+  });
 }
