@@ -3,11 +3,16 @@ import { computeSessionHealth, type Weights } from "@/lib/health/compute";
 import { faceForHp } from "@/lib/health/face";
 import { bus } from "@/lib/bus";
 
+const DEFAULT_WEIGHTS: Weights = { activity: 0.4, errors: 0.3, watcher: 0.2, tokens: 0.1 };
 function readSettings() {
   const db = getDb();
   const get = (k: string, fb: string) =>
     (db.prepare("SELECT value FROM settings WHERE key=?").get(k) as any)?.value ?? fb;
-  const weights = JSON.parse(get("health_weights", '{"activity":0.4,"errors":0.3,"watcher":0.2,"tokens":0.1}')) as Weights;
+  const weightsRaw = get("health_weights", "");
+  let weights: Weights = DEFAULT_WEIGHTS;
+  if (weightsRaw) {
+    try { weights = JSON.parse(weightsRaw) as Weights; } catch { /* keep default */ }
+  }
   const quota = parseInt(get("quota_threshold", "5000000"), 10);
   const strategy = get("project_hp_strategy", "max") as "max" | "avg";
   return { weights, quota, strategy };
