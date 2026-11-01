@@ -76,16 +76,18 @@ export async function scanAll(): Promise<void> {
       const jsonlPath = path.join(projDir, f);
       const r = await parseJsonlFile(jsonlPath);
       const internal = isInternalSessionMessages(r.messages) ? 1 : 0;
-      upsertSession.run(
-        sessionId, projId, jsonlPath,
-        r.startedAt ?? now, r.lastMsgAt, r.msgCount,
-        r.tokensIn, r.tokensOut, r.model, "idle",
-        r.endOffset, r.errorCount, internal
-      );
-      deleteFts.run(sessionId);
-      if (!internal) {
-        for (const m of r.messages) insertFts.run(sessionId, m.role, m.content, m.ts);
-      }
+      db.transaction(() => {
+        upsertSession.run(
+          sessionId, projId, jsonlPath,
+          r.startedAt ?? now, r.lastMsgAt, r.msgCount,
+          r.tokensIn, r.tokensOut, r.model, "idle",
+          r.endOffset, r.errorCount, internal
+        );
+        deleteFts.run(sessionId);
+        if (!internal) {
+          for (const m of r.messages) insertFts.run(sessionId, m.role, m.content, m.ts);
+        }
+      })();
       if (!internal) bus.emit("session:new", { sessionId, projectId: projId });
     }
   }
