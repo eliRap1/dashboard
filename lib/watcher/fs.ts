@@ -13,6 +13,7 @@ let watcher: FSWatcher | null = null;
 async function onJsonlChange(filePath: string) {
   const sessionId = path.basename(filePath, ".jsonl");
   const projectDirName = path.basename(path.dirname(filePath));
+  // TODO(audit): same decode logic lives in lib/indexer/scan.ts; extract to lib/paths.ts
   const cwd = /^[A-Za-z]--/.test(projectDirName)
     ? projectDirName.replace(/^([A-Za-z])--/, "$1:\\").replace(/-/g, "\\")
     : "/" + projectDirName.replace(/^-/, "").replace(/-/g, "/");
