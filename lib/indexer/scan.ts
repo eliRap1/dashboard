@@ -10,6 +10,8 @@ function hashCwd(cwd: string): string {
   return crypto.createHash("sha1").update(cwd).digest("hex").slice(0, 16);
 }
 
+// TODO(audit): decodeProjectDir is duplicated verbatim in lib/watcher/fs.ts.
+// Extract to lib/paths.ts so both callers share one implementation.
 function decodeProjectDir(name: string): string {
   if (/^[A-Za-z]--/.test(name)) {
     return name.replace(/^([A-Za-z])--/, "$1:\\").replace(/-/g, "\\");
