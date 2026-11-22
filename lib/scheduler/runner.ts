@@ -32,6 +32,7 @@ export async function runWatcher(watcherId: number, opts: RunOpts = {}, ctx?: an
   const runId = db.prepare(`INSERT INTO watcher_runs(watcher_id,started_at,status) VALUES (?,?,?)`)
     .run(watcherId, startedAt, "running").lastInsertRowid as number;
   bus.emit("watcher:run-started", { watcherId, runId });
+  let runCompleted = false;
   try {
     const cwd = targetCwd(w.scope, w.target_id);
     const prompt = `You are a watcher named "${w.name}" (scope=${w.scope}).
@@ -52,6 +53,7 @@ Reply ONLY with JSON: {"status":"ok"|"alert","message":"<1 sentence>","recommend
 
     db.prepare(`UPDATE watcher_runs SET ended_at=?, status=?, output=?, alert_msg=? WHERE id=?`)
       .run(Date.now(), status, r.stdout.slice(-4000), parsed.message ?? null, runId);
+    runCompleted = true;
 
     const feedKind = status === "alert" ? "watcher_alert" : "watcher_done";
     const feedPayload = JSON.stringify({ watcherId, name: w.name, status, message: parsed.message, recommendation: parsed.recommendation });
@@ -84,5 +86,13 @@ Reply ONLY with JSON: {"status":"ok"|"alert","message":"<1 sentence>","recommend
     }
   } finally {
     activeWatchers--;
+    // If the run row was never updated (exception before UPDATE), mark it failed so it
+    // doesn't remain stuck in "running" status indefinitely.
+    if (!runCompleted) {
+      try {
+        db.prepare("UPDATE watcher_runs SET ended_at=?, status=? WHERE id=? AND status='running'")
+          .run(Date.now(), "error", runId);
+      } catch { /* best-effort */ }
+    }
   }
 }
